@@ -12,11 +12,12 @@ has 'class' => (
 );
 
 has 'rollback_hooks' => (
-    metaclass => 'Collection::Array',
-    is        => 'ro',
-    isa       => 'ArrayRef[CodeRef]',
-    default   => sub { +[] },
-    provides  => {
+    metaclass  => 'Collection::Array',
+    is         => 'ro',
+    isa        => 'ArrayRef[CodeRef]',
+    default    => sub { +[] },
+    auto_deref => 1,
+    provides   => {
         push => 'add_rollback_hook',
     },
 );
@@ -48,6 +49,17 @@ sub expand {
         $self->class->compute_all_applicable_attributes;
     
     return $self->class->name->new( \%init_args );
+}
+
+sub rollback {
+    my $self = shift;
+    my @hooks = $self->rollback_hooks;
+    $_->() for(@hooks);
+}
+
+sub DEMOLISH {
+    my $self = shift;
+    $self->rollback;
 }
 
 1;
