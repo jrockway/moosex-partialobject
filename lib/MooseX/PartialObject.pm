@@ -59,4 +59,37 @@ be ignored until a read is attempted.  i'm not sure how to implement
 that, though.  the role would need to make all attributes lazy and for
 the default C<default> be C<die>.
 
+Example:
+
+  package Foo;
+  use Moose;
+  with 'MooseX::Traits';
+  has [qw/tons of attributes and then some more/] => (
+     is       => 'ro',
+     required => 1,
+     whatever => 'you_want',
+  );
+
+  sub a {
+     return $self->tons + $self->of;
+  }
+
+  sub b {
+     return $self->attributes
+
+  package main;
+  use Foo;
+
+  my $foo = Foo->new_with_traits( traits => ['PartialObject'] );
+  ## Foo=HASH(0x123456)
+  $foo->set_attribute( tons => 42 );
+  $foo->set_attribute( of   => -2 );
+  $foo->a; 
+  ## 40
+  $foo->b;
+  ## Error: "attempt to access uninitialized slot" or something
+
+This is probably bad because BUILD (etc.) will never be run.  It might
+be useful though.
+
 =cut
