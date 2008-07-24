@@ -28,24 +28,17 @@ has 'partial_instance' => (
     default => sub { shift->class->get_meta_instance->create_instance },
 );
 
-sub _check_slot {
-    my ($self, $slot_name) = @_;
-    confess "'$slot_name' is not a valid attribute in '@{[$self->class->name]}'"
-      unless $self->class->get_meta_instance->is_valid_slot($slot_name);
+# add get/set
+for my $dir (qw/get set/){
+    __PACKAGE__->meta->add_method( $dir => sub {
+        my ($self, $slot_name, @args) = @_;
+        my $method = "${dir}_value";
+        confess "'$slot_name' is not a valid attribute in '@{[$self->class->name]}'"
+          unless $self->class->get_meta_instance->is_valid_slot($slot_name);
+        $self->_get_class_attribute($slot_name)->$method($self->partial_instance, @args);
+    });
 }
-
-sub get {
-    my ($self, $slot_name) = @_;
-    $self->_check_slot($slot_name);
-    $self->_get_class_attribute($slot_name)->get_value($self->partial_instance);
-}
-
-sub set {
-    my ($self, $slot_name, $value) = @_;
-    $self->_check_slot($slot_name);
-    $self->_get_class_attribute($slot_name)->set_value($self->partial_instance, $value);
-}
-
+    
 sub expand {
     my $self = shift;
     my %init_args =
