@@ -58,3 +58,12 @@ sub expand {
 }
 
 1;
+
+=pod TODO
+
+perhaps we should make this a role that causes required attributes to
+be ignored until a read is attempted.  i'm not sure how to implement
+that, though.  the role would need to make all attributes lazy and for
+the default C<default> be C<die>.
+
+=cut
