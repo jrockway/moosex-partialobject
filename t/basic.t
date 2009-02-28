@@ -42,4 +42,3 @@ lives_ok {
 isa_ok $c, 'Class';
 is $c->FOO, 42, 'foo slot read via FOO accessor';
 is $c->bar, 'Hello', 'bar slot read via bar accessor';
-

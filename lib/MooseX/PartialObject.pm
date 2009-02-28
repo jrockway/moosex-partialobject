@@ -1,30 +1,17 @@
 package MooseX::PartialObject;
 use Moose;
-use MooseX::AttributeHelpers;
 
 has 'class' => (
     is       => 'ro',
     isa      => 'Moose::Meta::Class',
     required => 1,
     handles  => {
-        _get_class_attribute => 'get_attribute',
-    },
-);
-
-has 'rollback_hooks' => (
-    metaclass  => 'Collection::Array',
-    is         => 'ro',
-    isa        => 'ArrayRef[CodeRef]',
-    default    => sub { +[] },
-    auto_deref => 1,
-    provides   => {
-        push => 'add_rollback_hook',
+        _get_attribute => 'get_attribute',
     },
 );
 
 has 'partial_instance' => (
     is      => 'ro',
-    isa     => 'Class',
     lazy    => 1,
     default => sub { shift->class->get_meta_instance->create_instance },
 );
@@ -36,10 +23,10 @@ for my $dir (qw/get set/){
         my $method = "${dir}_value";
         confess "'$slot_name' is not a valid attribute in '@{[$self->class->name]}'"
           unless $self->class->get_meta_instance->is_valid_slot($slot_name);
-        $self->_get_class_attribute($slot_name)->$method($self->partial_instance, @args);
+        $self->_get_attribute($slot_name)->$method($self->partial_instance, @args)
     });
 }
-    
+
 sub expand {
     my $self = shift;
     my %init_args =
@@ -47,61 +34,29 @@ sub expand {
       grep { defined $_->[1] }
       map  { [ $_->init_arg, $self->get($_->name) ] }
         $self->class->compute_all_applicable_attributes;
-    
+
     return $self->class->name->new( \%init_args );
-}
-
-sub rollback {
-    my $self = shift;
-    my @hooks = $self->rollback_hooks;
-    $_->() for(@hooks);
-}
-
-sub DEMOLISH {
-    my $self = shift;
-    $self->rollback;
 }
 
 1;
 
-=pod TODO
+__END__
 
-perhaps we should make this a role that causes required attributes to
-be ignored until a read is attempted.  i'm not sure how to implement
-that, though.  the role would need to make all attributes lazy and for
-the default C<default> be C<die>.
+=head1 NAME
 
-Example:
+MooseX::PartialObject - build an object incrementally
 
-  package Foo;
-  use Moose;
-  with 'MooseX::Traits';
-  has [qw/tons of attributes and then some more/] => (
-     is       => 'ro',
-     required => 1,
-     whatever => 'you_want',
-  );
+=head1 SYNOPSIS
 
-  sub a {
-     return $self->tons + $self->of;
-  }
+    { package Class; use Moose; has [qw/foo bar/] => ( is => 'ro', required => 1 ) }
 
-  sub b {
-     return $self->attributes
+    my $partial = MooseX::PartialObject->new(
+        class => Class->meta,
+    );
 
-  package main;
-  use Foo;
+    $partial->set('foo', 42);
+    $partial->set('bar', 13);
+    $partial->set('made_up_name', 1); # throws an exception
 
-  my $foo = Foo->new_with_traits( traits => ['PartialObject'] );
-  ## Foo=HASH(0x123456)
-  $foo->set_attribute( tons => 42 );
-  $foo->set_attribute( of   => -2 );
-  $foo->a; 
-  ## 40
-  $foo->b;
-  ## Error: "attempt to access uninitialized slot" or something
-
-This is probably bad because BUILD (etc.) will never be run.  It might
-be useful though.
-
-=cut
+    my $real = $self->expand;
+    say $real->foo + $real->bar
